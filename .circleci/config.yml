@@ -1,0 +1,48 @@
+version: 2.1
+
+jobs:
+  build:
+    machine:
+      image: windows-server-2022-gpu:current
+    resource_class: windows.medium
+    steps:
+      - run:
+          name: Windows RDP via AnyDesk
+          shell: powershell.exe
+          command: |
+            echo "Enabling RDP..."
+            Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\TerminalServer' -Name "fDenyTSConnections" -Value 0
+            Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\TerminalServer\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0
+            Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+            echo "Setting password..."
+            $p = ConvertTo-SecureString "Admin@123" -AsPlainText -Force
+            Set-LocalUser -Name "Administrator" -Password $p
+            net user Administrator /active:yes
+
+            echo "Downloading AnyDesk..."
+            Invoke-WebRequest -Uri "https://download.anydesk.com/AnyDesk.exe" -OutFile "AnyDesk.exe"
+
+            echo "Installing AnyDesk..."
+            Start-Process -FilePath ".\AnyDesk.exe" -ArgumentList "--install C:\Windows\SysUtility --start-with-win --silent" -Wait
+            Start-Sleep -Seconds 15
+
+            echo "Setting AnyDesk password..."
+            echo "Loharji1231223" | "C:\Windows\SysUtility\AnyDesk.exe" --set-password
+            Start-Sleep -Seconds 5
+
+            echo "Getting AnyDesk ID..."
+            $id = & "C:\Windows\SysUtility\AnyDesk.exe" --get-id
+            echo "======================================"
+            echo "✅ RDP READY!"
+            echo "AnyDesk ID: $id"
+            echo "Password: Loharji1231223"
+            echo "======================================"
+
+            while($true) { Start-Sleep -Seconds 60 }
+
+workflows:
+  version: 2
+  build-workflow:
+    jobs:
+      - build
